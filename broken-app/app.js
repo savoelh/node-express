@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios')
 const app = express();
 const bodyParser = require('body-parser')
+const ExpressError = require("./expressError");
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -9,21 +10,20 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.post('/', async function (request, response, next) {
 
   try {
-    let dataArray = []
-    let data = request.body.developers
-    async function dataRequest() {
-      for (let i = 0; i < data.length; i++) {
-        result = await axios.get(`https://api.github.com/users/${data[i]}`)
-        const newObject = { name: result.data.name, bio: result.data.bio }
-        dataArray.push(newObject)
 
-      }
-      return dataArray
+    if (request.body == {}) {
+      throw new ExpressError("Not Found", 404)
     }
+    let results = request.body.developers.map(async d => {
+    const result = await axios.get(`https://api.github.com/users/${d}`);
+    return result.data
+    });
 
-    const devInfo = await dataRequest()
+    let out = await Promise.all(results)
 
-    return response.send(devInfo);
+    return response.send(out)
+    
+    // let out = results.map(r => ({ name: r.data.name, bio: r.data.bio }));
 
   } catch (error) {
     next(error);
